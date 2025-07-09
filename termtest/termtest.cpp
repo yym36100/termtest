@@ -67,9 +67,13 @@ void printMenu() {
     std::cout << "3. Cursor Move Example\n";
     std::cout << "4. Clear Screen + Draw Frame\n";
     std::cout << "5. Custom ANSI String\n";
+    std::cout << "6. Show Status Bar\n";
+    std::cout << "7. Show Progress Bar\n";
+    std::cout << "8. Simulated Menu\n";
     std::cout << "0. Exit\n";
     std::cout << "Select option: ";
 }
+
 
 void demoStyles() {
     sendString("\x1B[1mBold Text\x1B[0m\r\n");
@@ -84,6 +88,45 @@ void demoCursorMove() {
     sendString("\x1B[6;20HAnother line at (6,20)");
     sendString("\x1B[10;1HBack to bottom\r\n");
 }
+void drawStatusBar(const std::string& text) {
+    sendString("\x1B[s");                    // Save cursor
+    sendString("\x1B[24;1H");                // Move to bottom
+    sendString("\x1B[7m");                   // Inverted colors
+    sendString(" " + text + std::string(80 - text.length(), ' ')); // Pad line
+    sendString("\x1B[0m");                   // Reset
+    sendString("\x1B[u");                    // Restore cursor
+    sendString("alma");                    // Restore cursor
+}
+void drawProgressBar(int percent) {
+    int width = 50;
+    int filled = percent * width / 100;
+    std::ostringstream oss;
+    oss << "\x1B[10;5H[";
+    for (int i = 0; i < width; ++i) {
+        if (i < filled) oss << "\x1B[42m*\x1B[0m";  // Green block
+        else oss << "-";
+    }
+    oss << "] " << percent << "%";
+    sendString(oss.str());
+}
+void showFakeInteractiveMenu() {
+    clearScreen();
+    const char* items[] = { "Option 1", "Option 2", "Option 3", "Exit Menu" };
+    int selected = 1;
+
+    for (int i = 0; i < 4; ++i) {
+        std::ostringstream oss;
+        oss << "\x1B[" << (5 + i) << ";10H";
+        if (i == selected)
+            oss << "\x1B[7m> " << items[i] << " \x1B[0m";
+        else
+            oss << "  " << items[i];
+        sendString(oss.str());
+    }
+
+    sendString("\x1B[12;1H(This is a placeholder — add real key input later.)\r\n");
+}
+
 
 int main() {
     std::string port;
@@ -110,7 +153,22 @@ int main() {
             sendString(custom + "\r\n");
             break;
         }
+        case 6:
+            drawStatusBar("Connected to STM32 - UART OK");
+            break;
+        case 7: {
+            clearScreen();
+            for (int i = 0; i <= 100; i += 10) {
+                drawProgressBar(i);
+                Sleep(200);  // Windows Sleep(ms)
+            }
+            break;
         }
+        case 8:
+            showFakeInteractiveMenu();
+            break;
+        }
+
     } while (choice != 0);
 
     CloseHandle(hSerial);
